@@ -1,10 +1,6 @@
 # Jetbrains
 .idea/
 
-# ignore all resource and generated files but not the folders themselves
-res/*
-gen/*
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
