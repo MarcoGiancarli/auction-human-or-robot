@@ -3,6 +3,7 @@ __author__ = 'Marco Giancarli -- m.a.giancarli@gmail.com'
 
 import numpy as np
 import sqlite3 as sqlite
+import math
 import csv
 
 
@@ -24,6 +25,9 @@ def get_bidder_data(bidder_id, bidder_address, bidder_payment_account):
     times = []
     # num_same_address = 0
     # num_same_payment_account = 0
+    time_since_last_bid_sum = 0
+    bid_recency_sum = 0
+    last_bid_count = 0
 
     # The code below is commented out because it seems not to be useful. It's
     # always 0 (with a bug that removes 1 for addresses in test data only)
@@ -79,6 +83,8 @@ def get_bidder_data(bidder_id, bidder_address, bidder_payment_account):
         country = bid[6]
         ip = bid[7]
         url = bid[8]
+        time_since_last_bid = bid[9]
+        is_last_bid = bid[10]
 
         bid_data = [auction, merchandise, device, country, ip, url]
         unique_dicts = [unique_auctions, unique_merchandise, unique_devices,
@@ -86,11 +92,14 @@ def get_bidder_data(bidder_id, bidder_address, bidder_payment_account):
 
         for item, unique_dict in zip(bid_data, unique_dicts):
             if item not in unique_dict:
-                unique_dict[item] = 0
+                unique_dict[item] = 1
             else:
                 unique_dict[item] += 1
 
         times.append(time)
+        time_since_last_bid_sum += time_since_last_bid
+        bid_recency_sum += 20 / math.log(time_since_last_bid+2)
+        last_bid_count += is_last_bid
 
 
     num_auctions = len(unique_auctions)
@@ -108,6 +117,16 @@ def get_bidder_data(bidder_id, bidder_address, bidder_payment_account):
     else:
         time_stddev = 0
 
+    avg_time_since_last_bid = float(time_since_last_bid_sum) / \
+                              float(num_bids) \
+                              if num_bids > 0 else 0
+    avg_bid_recency = float(bid_recency_sum) / \
+                      float(num_bids) \
+                      if num_bids > 0 else 0
+    last_bid_rate = float(last_bid_count) / \
+                    float(num_bids) \
+                    if num_bids > 0 else 0
+
     return (
         num_bids,
         num_auctions,
@@ -118,7 +137,10 @@ def get_bidder_data(bidder_id, bidder_address, bidder_payment_account):
         num_countries,
         time_stddev,
         # num_same_address,
-        # num_same_payment_account
+        # num_same_payment_account,
+        avg_time_since_last_bid,
+        avg_bid_recency,
+        last_bid_rate
     )
 
 # Use these to keep track of addresses and payment accounts that we already
@@ -182,7 +204,10 @@ if __name__ == '__main__':
             num_countries,
             time_stddev,
             # num_same_address,
-            # num_same_payment_account
+            # num_same_payment_account,
+            avg_time_since_last_bid,
+            avg_bid_recency,
+            last_bid_rate
         ) = get_bidder_data(bidder_id,
                             this_bidders_address,
                             this_bidders_payment_account)
@@ -198,6 +223,9 @@ if __name__ == '__main__':
             time_stddev,
             # num_same_address,
             # num_same_payment_account,
+            avg_time_since_last_bid,
+            avg_bid_recency,
+            last_bid_rate,
             float(num_bids) / float(num_auctions) if num_auctions > 0 else 0,
             float(num_bids) / float(num_devices) if num_devices > 0 else 0,
             float(num_bids) / float(num_ips) if num_ips > 0 else 0,
@@ -226,7 +254,10 @@ if __name__ == '__main__':
             num_countries,
             time_stddev,
             # num_same_address,
-            # num_same_payment_account
+            # num_same_payment_account,
+            avg_time_since_last_bid,
+            avg_bid_recency,
+            last_bid_rate
         ) = get_bidder_data(bidder_id,
                             this_bidders_address,
                             this_bidders_payment_account)
@@ -243,6 +274,9 @@ if __name__ == '__main__':
             time_stddev,
             # num_same_address,
             # num_same_payment_account,
+            avg_time_since_last_bid,
+            avg_bid_recency,
+            last_bid_rate,
             float(num_bids) / float(num_auctions) if num_auctions > 0 else 0,
             float(num_bids) / float(num_devices) if num_devices > 0 else 0,
             float(num_bids) / float(num_ips) if num_ips > 0 else 0,
@@ -262,7 +296,11 @@ if __name__ == '__main__':
         titles = ('bidder_id', 'payment_account', 'address', 'num_bids',
                   'num_auctions', 'num_devices', 'num_ips', 'num_urls',
                   'num_merchandise', 'num_countries', 'time_stddev',
-                  # 'num_same_address', 'num_same_payment_account'
+                  # 'num_same_address', 'num_same_payment_account',
+                  'avg_time_since_last_bid', 'avg_bid_recency', 'last_bid_rate',
+                  'bids/auctions', 'bids/devices', 'bids/ips', 'bids/countries',
+                  'bids/urls', 'auctions/devices', 'auctions/countries',
+                  'auctions/countries', 'devices/ips', 'auctions/urls',
                   )
         output_writer.writerow(titles)
         for bidder in train_bidders:
@@ -274,7 +312,11 @@ if __name__ == '__main__':
         titles = ('bidder_id', 'payment_account', 'address', 'num_bids',
                   'num_auctions', 'num_devices', 'num_ips', 'num_urls',
                   'num_merchandise', 'num_countries', 'time_stddev',
-                  # 'num_same_address', 'num_same_payment_account'
+                  # 'num_same_address', 'num_same_payment_account',
+                  'avg_time_since_last_bid', 'avg_bid_recency', 'last_bid_rate',
+                  'bids/auctions', 'bids/devices', 'bids/ips', 'bids/countries',
+                  'bids/urls', 'auctions/devices', 'auctions/countries',
+                  'auctions/countries', 'devices/ips', 'auctions/urls',
                   )
         output_writer.writerow(titles)
         for bidder in test_bidders:
