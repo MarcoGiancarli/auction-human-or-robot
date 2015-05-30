@@ -3,7 +3,7 @@ __author__ = 'Marco Giancarli -- m.a.giancarli@gmail.com'
 
 import numpy as np
 import sqlite3 as sqlite
-import math
+from decimal import Decimal
 import csv
 
 
@@ -98,7 +98,7 @@ def get_bidder_data(bidder_id, bidder_address, bidder_payment_account):
 
         times.append(time)
         time_since_last_bid_sum += time_since_last_bid
-        bid_recency_sum += 20 / math.log(time_since_last_bid+2)
+        bid_recency_sum += 1 / float(Decimal(time_since_last_bid+2).ln())
         last_bid_count += is_last_bid
 
 
@@ -113,7 +113,8 @@ def get_bidder_data(bidder_id, bidder_address, bidder_payment_account):
         # find the standard deviation of the intervals of time between bids.
         times.sort()
         time_diffs = [times[i+1] - times[i] for i in range(len(times)-1)]
-        time_stddev = np.std(time_diffs)
+        stddev = np.std(time_diffs)
+        time_stddev = float(Decimal(stddev).ln()) if stddev > 2.72 else -100
     else:
         time_stddev = 0
 
@@ -226,16 +227,16 @@ if __name__ == '__main__':
             avg_time_since_last_bid,
             avg_bid_recency,
             last_bid_rate,
-            float(num_bids) / float(num_auctions) if num_auctions > 0 else 0,
-            float(num_bids) / float(num_devices) if num_devices > 0 else 0,
-            float(num_bids) / float(num_ips) if num_ips > 0 else 0,
-            float(num_bids) / float(num_countries) if num_countries > 0 else 0,
-            float(num_bids) / float(num_urls) if num_urls > 0 else 0,
-            float(num_auctions) / float(num_devices) if num_devices > 0 else 0,
-            float(num_auctions) / float(num_ips) if num_ips > 0 else 0,
-            float(num_auctions) / float(num_countries) if num_countries > 0 else 0,
-            float(num_devices) / float(num_ips) if num_ips > 0 else 0,
-            float(num_auctions) / float(num_urls) if num_urls > 0 else 0,
+            # float(num_bids) / float(num_auctions) if num_auctions > 0 else 0,
+            # float(num_bids) / float(num_devices) if num_devices > 0 else 0,
+            # float(num_bids) / float(num_ips) if num_ips > 0 else 0,
+            # float(num_bids) / float(num_countries) if num_countries > 0 else 0,
+            # float(num_bids) / float(num_urls) if num_urls > 0 else 0,
+            # float(num_auctions) / float(num_devices) if num_devices > 0 else 0,
+            # float(num_auctions) / float(num_ips) if num_ips > 0 else 0,
+            # float(num_auctions) / float(num_countries) if num_countries > 0 else 0,
+            # float(num_devices) / float(num_ips) if num_ips > 0 else 0,
+            # float(num_auctions) / float(num_urls) if num_urls > 0 else 0,
         )
 
 
@@ -277,16 +278,16 @@ if __name__ == '__main__':
             avg_time_since_last_bid,
             avg_bid_recency,
             last_bid_rate,
-            float(num_bids) / float(num_auctions) if num_auctions > 0 else 0,
-            float(num_bids) / float(num_devices) if num_devices > 0 else 0,
-            float(num_bids) / float(num_ips) if num_ips > 0 else 0,
-            float(num_bids) / float(num_countries) if num_countries > 0 else 0,
-            float(num_bids) / float(num_urls) if num_urls > 0 else 0,
-            float(num_auctions) / float(num_devices) if num_devices > 0 else 0,
-            float(num_auctions) / float(num_ips) if num_ips > 0 else 0,
-            float(num_auctions) / float(num_countries) if num_countries > 0 else 0,
-            float(num_devices) / float(num_ips) if num_ips > 0 else 0,
-            float(num_auctions) / float(num_urls) if num_urls > 0 else 0,
+            # float(num_bids) / float(num_auctions) if num_auctions > 0 else 0,
+            # float(num_bids) / float(num_devices) if num_devices > 0 else 0,
+            # float(num_bids) / float(num_ips) if num_ips > 0 else 0,
+            # float(num_bids) / float(num_countries) if num_countries > 0 else 0,
+            # float(num_bids) / float(num_urls) if num_urls > 0 else 0,
+            # float(num_auctions) / float(num_devices) if num_devices > 0 else 0,
+            # float(num_auctions) / float(num_ips) if num_ips > 0 else 0,
+            # float(num_auctions) / float(num_countries) if num_countries > 0 else 0,
+            # float(num_devices) / float(num_ips) if num_ips > 0 else 0,
+            # float(num_auctions) / float(num_urls) if num_urls > 0 else 0,
         )
 
 
@@ -298,9 +299,9 @@ if __name__ == '__main__':
                   'num_merchandise', 'num_countries', 'time_stddev',
                   # 'num_same_address', 'num_same_payment_account',
                   'avg_time_since_last_bid', 'avg_bid_recency', 'last_bid_rate',
-                  'bids/auctions', 'bids/devices', 'bids/ips', 'bids/countries',
-                  'bids/urls', 'auctions/devices', 'auctions/countries',
-                  'auctions/countries', 'devices/ips', 'auctions/urls',
+                  # 'bids/auctions', 'bids/devices', 'bids/ips', 'bids/countries',
+                  # 'bids/urls', 'auctions/devices', 'auctions/countries',
+                  # 'auctions/countries', 'devices/ips', 'auctions/urls',
                   )
         output_writer.writerow(titles)
         for bidder in train_bidders:
@@ -314,9 +315,9 @@ if __name__ == '__main__':
                   'num_merchandise', 'num_countries', 'time_stddev',
                   # 'num_same_address', 'num_same_payment_account',
                   'avg_time_since_last_bid', 'avg_bid_recency', 'last_bid_rate',
-                  'bids/auctions', 'bids/devices', 'bids/ips', 'bids/countries',
-                  'bids/urls', 'auctions/devices', 'auctions/countries',
-                  'auctions/countries', 'devices/ips', 'auctions/urls',
+                  # 'bids/auctions', 'bids/devices', 'bids/ips', 'bids/countries',
+                  # 'bids/urls', 'auctions/devices', 'auctions/countries',
+                  # 'auctions/countries', 'devices/ips', 'auctions/urls',
                   )
         output_writer.writerow(titles)
         for bidder in test_bidders:
