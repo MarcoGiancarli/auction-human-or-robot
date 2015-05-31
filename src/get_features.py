@@ -4,6 +4,7 @@ __author__ = 'Marco Giancarli -- m.a.giancarli@gmail.com'
 import numpy as np
 import sqlite3 as sqlite
 from decimal import Decimal
+import math
 import csv
 
 
@@ -14,7 +15,7 @@ BIDDERS_CONVERTERS = [str, str, str, float] # can be zipped with test or train
 BIDS_CONVERTERS = [int, str, str, str, str, int, str, str, str]
 
 
-def get_bidder_data(bidder_id, bidder_address, bidder_payment_account):
+def get_bidder_data(bidder_id, bidder_address, bidder_payment_account, cursor):
     num_bids = 0
     unique_auctions = {}
     unique_devices = {}
@@ -129,13 +130,13 @@ def get_bidder_data(bidder_id, bidder_address, bidder_payment_account):
                     if num_bids > 0 else 0
 
     return (
-        num_bids,
-        num_auctions,
-        num_devices,
-        num_ips,
-        num_urls,
-        num_merchandise,
-        num_countries,
+        math.log(num_bids + 1),
+        math.log(num_auctions + 1),
+        math.log(num_devices + 1),
+        math.log(num_ips + 1),
+        math.log(num_urls + 1),
+        math.log(num_merchandise + 1),
+        math.log(num_countries + 1),
         time_stddev,
         # num_same_address,
         # num_same_payment_account,
@@ -211,7 +212,8 @@ if __name__ == '__main__':
             last_bid_rate
         ) = get_bidder_data(bidder_id,
                             this_bidders_address,
-                            this_bidders_payment_account)
+                            this_bidders_payment_account,
+                            cursor)
 
         train_bidders[bidder_index_map[bidder_id]] += (
             num_bids,
@@ -261,7 +263,8 @@ if __name__ == '__main__':
             last_bid_rate
         ) = get_bidder_data(bidder_id,
                             this_bidders_address,
-                            this_bidders_payment_account)
+                            this_bidders_payment_account,
+                            cursor)
 
         # add all the new data to this bidder's tuple
         test_bidders[bidder_index_map[bidder_id]] += (

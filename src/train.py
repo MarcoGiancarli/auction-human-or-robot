@@ -108,10 +108,9 @@ if __name__ == '__main__':
     train_X = prep.scale(train_X)
 
     # set up feature selection
-    selector = SelectKBest(f_regression, k=5)
+    selector = SelectKBest(f_regression, k='all')
     selector.fit(train_X, train_y)
-    print selector.scores_
-    print selector.get_support(indices=True)
+    # print selector.get_support(indices=True)
     train_X = selector.transform(train_X)
 
     # get num inputs from the first example in train_X
@@ -127,11 +126,11 @@ if __name__ == '__main__':
     model = FeedForwardNetwork()
 
     # create layers
-    input_layer = LinearLayer(num_inputs)
-    input_bias = BiasUnit()
-    hidden_layer = LinearLayer(50)
-    hidden_bias = BiasUnit()
-    output_layer = SigmoidLayer(1)
+    input_layer = LinearLayer(num_inputs, name='input-layer')
+    input_bias = BiasUnit(name='input-bias')
+    hidden_layer = LinearLayer(100, name='hidden-layer')
+    hidden_bias = BiasUnit(name='hidden-bias')
+    output_layer = SigmoidLayer(1, name='output-layer')
 
     # add layers to model
     model.addInputModule(input_layer)
@@ -141,20 +140,22 @@ if __name__ == '__main__':
     model.addOutputModule(output_layer)
 
     # create connections
-    input_hidden_connection = FullConnection(input_layer, hidden_layer)
-    input_hidden_bias_connection = FullConnection(input_bias, output_layer)
-    hidden_output_connection = FullConnection(hidden_layer, output_layer)
-    hidden_output_bias_connection = FullConnection(hidden_bias, output_layer)
+    input_hidden_connection = FullConnection(input_layer, hidden_layer, name='input-to-hidden')
+    input_hidden_bias_connection = FullConnection(input_bias, output_layer, name='input-bias-to-hidden')
+    hidden_output_connection = FullConnection(hidden_layer, output_layer, name='hidden-to-output')
+    hidden_output_bias_connection = FullConnection(hidden_bias, output_layer, name='hidden-bias-to-output')
 
     # add connections
     model.addConnection(input_hidden_connection)
+    model.addConnection(input_hidden_bias_connection)
     model.addConnection(hidden_output_connection)
+    model.addConnection(hidden_output_bias_connection)
 
     # sort the shit
     model.sortModules()
 
     # train the thing - train until convergence in testing to use validation set
-    trainer = BackpropTrainer(model, dataset=training_set, momentum=0.2,
+    trainer = BackpropTrainer(model, dataset=training_set, momentum=0.5,
                               verbose=True, weightdecay=0.01)
     # trainer.trainEpochs(40)
     trainer.trainUntilConvergence(maxEpochs=60)
