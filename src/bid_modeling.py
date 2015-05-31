@@ -16,17 +16,11 @@ if __name__=='__main__':
     connection = sqlite.connect('../res/auctions.db')
     cursor = connection.cursor()
 
-    robot_bids = []
 
-
-    sql = 'SELECT bidder_id FROM train WHERE outcome=1.0'
-    robot_bidder_ids = [result[0] for result in cursor.execute(sql)]
-    print len(robot_bidder_ids),'robots found.'
-
-    for robot_bidder_id in robot_bidder_ids:
-        sql = 'SELECT time_since_last_bid,time FROM bids WHERE bidder_id=?'
-        bids = cursor.execute(sql, (robot_bidder_id,)).fetchall()
-        robot_bids.extend(bids)
+    sql = 'SELECT time_since_last_bid,time FROM bids ' + \
+          'INNER JOIN train ON bids.bidder_id=train.bidder_id ' + \
+          'WHERE outcome=1.0 '
+    robot_bids = cursor.execute(sql).fetchall()
     robot_bids = [(float(val[0]), float(val[1])) for val in robot_bids]
 
     print len(robot_bids), 'robot bids found.'
