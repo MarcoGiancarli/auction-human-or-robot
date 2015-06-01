@@ -20,6 +20,42 @@ import numpy as np
 import csv
 
 
+def make_network(num_inputs, num_hidden=100):
+    # create model
+    model = FeedForwardNetwork()
+
+    # create layers
+    input_layer = LinearLayer(num_inputs, name='input-layer')
+    input_bias = BiasUnit(name='input-bias')
+    hidden_layer = SigmoidLayer(num_hidden, name='hidden-layer')
+    hidden_bias = BiasUnit(name='hidden-bias')
+    output_layer = SigmoidLayer(1, name='output-layer')
+
+    # add layers to model
+    model.addInputModule(input_layer)
+    model.addModule(input_bias)
+    model.addModule(hidden_layer)
+    model.addModule(hidden_bias)
+    model.addOutputModule(output_layer)
+
+    # create connections
+    input_hidden_connection = FullConnection(input_layer, hidden_layer, name='input-to-hidden')
+    input_hidden_bias_connection = FullConnection(input_bias, output_layer, name='input-bias-to-hidden')
+    hidden_output_connection = FullConnection(hidden_layer, output_layer, name='hidden-to-output')
+    hidden_output_bias_connection = FullConnection(hidden_bias, output_layer, name='hidden-bias-to-output')
+
+    # add connections
+    model.addConnection(input_hidden_connection)
+    model.addConnection(input_hidden_bias_connection)
+    model.addConnection(hidden_output_connection)
+    model.addConnection(hidden_output_bias_connection)
+
+    # sort the shit
+    model.sortModules()
+
+    return model
+
+
 if __name__ == '__main__':
     train_bidders_list = []
     test_bidders_list = []
@@ -118,62 +154,64 @@ if __name__ == '__main__':
 
     # set up pybrain dataset
     training_set = ClassificationDataSet(num_inputs, nb_classes=1)
-    for X,y in zip(train_X, train_y):
+    for X,y in zip(train_X[400:], train_y[400:]):  ######################################
         training_set.addSample(X, y)
 
 
     # create model
-    model = FeedForwardNetwork()
-
-    # create layers
-    input_layer = LinearLayer(num_inputs, name='input-layer')
-    input_bias = BiasUnit(name='input-bias')
-    hidden_layer = LinearLayer(100, name='hidden-layer')
-    hidden_bias = BiasUnit(name='hidden-bias')
-    output_layer = SigmoidLayer(1, name='output-layer')
-
-    # add layers to model
-    model.addInputModule(input_layer)
-    model.addModule(input_bias)
-    model.addModule(hidden_layer)
-    model.addModule(hidden_bias)
-    model.addOutputModule(output_layer)
-
-    # create connections
-    input_hidden_connection = FullConnection(input_layer, hidden_layer, name='input-to-hidden')
-    input_hidden_bias_connection = FullConnection(input_bias, output_layer, name='input-bias-to-hidden')
-    hidden_output_connection = FullConnection(hidden_layer, output_layer, name='hidden-to-output')
-    hidden_output_bias_connection = FullConnection(hidden_bias, output_layer, name='hidden-bias-to-output')
-
-    # add connections
-    model.addConnection(input_hidden_connection)
-    model.addConnection(input_hidden_bias_connection)
-    model.addConnection(hidden_output_connection)
-    model.addConnection(hidden_output_bias_connection)
-
-    # sort the shit
-    model.sortModules()
+    models = [make_network(num_inputs, 500) for dummy in range(23)]
 
     # train the thing - train until convergence in testing to use validation set
-    trainer = BackpropTrainer(model, dataset=training_set, momentum=0.5,
-                              verbose=True, weightdecay=0.01)
-    # trainer.trainEpochs(40)
-    trainer.trainUntilConvergence(maxEpochs=60)
+    for model_index in range(len(models)):
+        trainer = BackpropTrainer(models[model_index], dataset=training_set,
+                                  momentum=0.1, verbose=True, weightdecay=0.01)
+        for dummy in range(15):
+            trainer.trainEpochs(1)
+            # temp_predictions = [0 for dummy in range(400)]
+            # for sample_index in range(400):
+            #     temp_predictions[sample_index] += models[model_index].activate(train_X[sample_index])
+            # score = roc_auc_score(train_y[:400], temp_predictions)
+            # print score
+            # if score > 0.91:
+            #     NetworkWriter.writeToFile(models[model_index], '../gen/network_data' + str(100 + dummy))
 
-    # back it up for later
-    NetworkWriter.writeToFile(model, '../gen/network_data')
 
-    # use this to recover a network
-    # model = NetworkReader.readFrom('../gen/network_data')
+        # trainer.trainUntilConvergence(maxEpochs=60)
+
+        # back it up for later
+        NetworkWriter.writeToFile(models[model_index], '../gen/network_data' + str(model_index + 1))
+
+        # use this to recover a network
+        # models[model_index] = NetworkReader.readFrom('../gen/network_data' + (index + 1))
 
     # make arrays with the test data and scale X
     test_X = np.array(test_bidders_list)
-    test_X = poly.fit_transform(test_X)
+    test_X = poly.transform(test_X)
     test_X = prep.scale(test_X)
     test_X = selector.transform(test_X)
 
     # predict for test data
-    test_y = [model.activate(X)[0] for X in test_X]
+    test_y = [0 for dummy in range(len(test_X))]
+    for index in range(len(test_X)):
+        for model in models:
+            test_y[index] += model.activate(test_X[index])
+        test_y[index] /= len(models)
+
+    # get ROC AUC for first 400 training samples
+    print ''
+    nerd = 400
+    predictions = [0 for dummy in range(nerd)]
+    for model in models:
+        temp_predictions = [0 for dummy in range(nerd)]
+        for index in range(nerd):
+            temp_predictions[index] += model.activate(train_X[index])
+        print roc_auc_score(train_y[:nerd], temp_predictions)
+        for index in range(nerd):
+            predictions[index] += temp_predictions[index]
+    predictions = [p / len(models) for p in predictions]
+    print '----------'
+    print roc_auc_score(train_y[:nerd], predictions)
+
     print 'First 50 predictions:'
     print ['%1.5f' % y for y in test_y[:10]]
     print ['%1.5f' % y for y in test_y[10:20]]
