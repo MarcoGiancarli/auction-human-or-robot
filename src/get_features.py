@@ -132,13 +132,13 @@ def get_bidder_data(bidder_id, bidder_address, bidder_payment_account, cursor):
                     if num_bids > 0 else 0
 
     return (
-        math.log(num_bids + 1),
-        math.log(num_auctions + 1),
-        math.log(num_devices + 1),
-        math.log(num_ips + 1),
-        math.log(num_urls + 1),
-        math.log(num_merchandise + 1),
-        math.log(num_countries + 1),
+        num_bids,
+        num_auctions,
+        num_devices,
+        num_ips,
+        num_urls,
+        num_merchandise,
+        num_countries,
         time_stddev,
         # num_same_address,
         # num_same_payment_account,

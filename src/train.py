@@ -27,7 +27,7 @@ def make_network(num_inputs, num_hidden=100):
     # create layers
     input_layer = LinearLayer(num_inputs, name='input-layer')
     input_bias = BiasUnit(name='input-bias')
-    hidden_layer = SigmoidLayer(num_hidden, name='hidden-layer')
+    hidden_layer = LinearLayer(num_hidden, name='hidden-layer')
     hidden_bias = BiasUnit(name='hidden-bias')
     output_layer = SigmoidLayer(1, name='output-layer')
 
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     test_bidder_ids = []
 
     OVERSAMPLE_VALUE = 10 # copy all of the bots in test data this many times
-    BID_THRESHOLD = 1  # bidders must have at least this many bids
+    BID_THRESHOLD = 2  # bidders must have at least this many bids
     bad_examples = {}  # not enough data to be relevant
     bot_examples_indices = []  # track the indices of bots for oversampling
 
@@ -77,10 +77,14 @@ if __name__ == '__main__':
 
             for value in read_values[3:]:
                 number = float(value)
+                # add the log of the values plus one
+                log = math.log(number + 1)
                 # add the inverse of the values or 10e3 if divided by zero
                 inverse = math.pow(number, -1) if math.fabs(number) > 1e-5 \
                                                else math.copysign(1e5, number)
-                used_values += (number, inverse)
+                # add the inverse of the log of the values plus one
+                inverse_log = math.pow(log, -1) if log > 1e-5 else 1e5
+                used_values += (number, log, inverse, inverse_log)
             train_bidders_list.append(used_values)
             train_bidder_ids.append(read_values[0])
 
@@ -97,10 +101,14 @@ if __name__ == '__main__':
 
             for value in read_values[3:]:
                 number = float(value)
+                # add the log of the values plus one
+                log = math.log(number + 1)
                 # add the inverse of the values or 10e3 if divided by zero
                 inverse = math.pow(number, -1) if math.fabs(number) > 1e-5 \
                                                else math.copysign(1e5, number)
-                used_values += (number, inverse)
+                # add the inverse of the log of the values plus one
+                inverse_log = math.pow(log, -1) if log > 1e-5 else 1e5
+                used_values += (number, log, inverse, inverse_log)
             test_bidders_list.append(used_values)
             test_bidder_ids.append(read_values[0])
 
@@ -159,19 +167,23 @@ if __name__ == '__main__':
 
 
     # create model
-    models = [make_network(num_inputs, 500) for dummy in range(23)]
+    hidden_layer_size = 800
+    num_epochs = 15
+    models = [make_network(num_inputs, hidden_layer_size) for dummy in range(5)]
+    network_numbers = range(1, len(models) + 1)
+    # network_numbers = [1,2,3,6,7,8,10,13,15,18,20,21,22]
 
     # train the thing - train until convergence in testing to use validation set
     for model_index in range(len(models)):
         trainer = BackpropTrainer(models[model_index], dataset=training_set,
-                                  momentum=0.1, verbose=True, weightdecay=0.01)
-        for dummy in range(15):
+                                  momentum=0.2, verbose=True, weightdecay=0.02)
+        for dummy in range(num_epochs):
             trainer.trainEpochs(1)
-            # temp_predictions = [0 for dummy in range(400)]
-            # for sample_index in range(400):
-            #     temp_predictions[sample_index] += models[model_index].activate(train_X[sample_index])
-            # score = roc_auc_score(train_y[:400], temp_predictions)
-            # print score
+            temp_predictions = [0 for dummy in range(400)]
+            for sample_index in range(400):
+                temp_predictions[sample_index] += models[model_index].activate(train_X[sample_index])
+            score = roc_auc_score(train_y[:400], temp_predictions)
+            print score
             # if score > 0.91:
             #     NetworkWriter.writeToFile(models[model_index], '../gen/network_data' + str(100 + dummy))
 
@@ -179,7 +191,7 @@ if __name__ == '__main__':
         # trainer.trainUntilConvergence(maxEpochs=60)
 
         # back it up for later
-        NetworkWriter.writeToFile(models[model_index], '../gen/network_data' + str(model_index + 1))
+        # NetworkWriter.writeToFile(models[model_index], '../gen/network_data' + str(network_numbers[model_index]))
 
         # use this to recover a network
         # models[model_index] = NetworkReader.readFrom('../gen/network_data' + (index + 1))
